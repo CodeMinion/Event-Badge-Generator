@@ -61,9 +61,12 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
 
   ui.Image _imageToPrint;
+  Image _imageToShow;
+
   final translator = GoogleTranslator();
 
-  Future<ByteData> _tagGenerator;
+  //Future<ByteData> _tagGenerator;
+  Future<Image> _tagGenerator;
   int _numberOfCopies = 1;
   String _activeLanguageCode = 'en';
 
@@ -203,10 +206,12 @@ class _MyHomePageState extends State<MyHomePage> {
     return translator.translate(input, from: 'en', to: to);
   }
 
-  Future<ByteData> getTag() async {
+  //Future<ByteData> getTag() async {
+  Future<Image> getTag() async {
 
     if (_activeLanguageCode == _lastLanguage) {
-      return _imageToPrint.toByteData(format: ImageByteFormat.png);
+      //return _imageToPrint.toByteData(format: ImageByteFormat.png);
+      return _imageToShow;
     }
 
     PictureRecorder recorder = PictureRecorder();
@@ -288,7 +293,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     _lastLanguage = _activeLanguageCode;
 
-    return picture.toByteData(format: ImageByteFormat.png);
+    _imageToShow = Image.memory((await picture.toByteData(format: ImageByteFormat.png)).buffer.asUint8List());
+
+    //return picture.toByteData(format: ImageByteFormat.png);
+    return _imageToShow;
   }
 
 
@@ -365,13 +373,13 @@ class _MyHomePageState extends State<MyHomePage> {
               padding: const EdgeInsets.all(8.0),
               child: FutureBuilder(
                 future: _tagGenerator,
-                builder: (buildContext, AsyncSnapshot<ByteData> snapshot) {
+                builder: (buildContext, AsyncSnapshot<Image> snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return CircularProgressIndicator();
                     }
 
                     if (snapshot.hasData) {
-                      return Image.memory(snapshot.data.buffer.asUint8List());
+                      return snapshot.data;
                     }
                     else {
                       return Text("No Translation");
