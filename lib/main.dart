@@ -63,6 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
   ui.Image _imageToPrint;
   final translator = GoogleTranslator();
 
+  Future<ByteData> _tagGenerator;
   int _numberOfCopies = 1;
   String _activeLanguageCode = 'en';
 
@@ -189,6 +190,13 @@ class _MyHomePageState extends State<MyHomePage> {
   "Hausa": "ha",
     "Polish":"pl",
   });
+
+
+
+  void initState() {
+    super.initState();
+    _tagGenerator = getTag();
+  }
 
   Future<Translation> getNameTagHeader({String to = 'ar'}) {
     final input = "Hello, I'm".toUpperCase();
@@ -327,6 +335,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       onChanged: (String newLanguage){
                         setState(() {
                           _activeLanguageCode = newLanguage;
+                          _tagGenerator = getTag();
                         });
                       },
                       items: _languageMap.entries.map((entry) {
@@ -355,7 +364,7 @@ class _MyHomePageState extends State<MyHomePage> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: FutureBuilder(
-                future: getTag(),
+                future: _tagGenerator,
                 builder: (buildContext, AsyncSnapshot<ByteData> snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return CircularProgressIndicator();
