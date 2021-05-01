@@ -66,6 +66,8 @@ class _MyHomePageState extends State<MyHomePage> {
   int _numberOfCopies = 1;
   String _activeLanguageCode = 'en';
 
+  String _lastLanguage;
+
   List<int> _copiesCount = [
     1,
     2,
@@ -195,6 +197,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<ByteData> getTag() async {
 
+    if (_activeLanguageCode == _lastLanguage) {
+      return _imageToPrint.toByteData(format: ImageByteFormat.png);
+    }
+
     PictureRecorder recorder = PictureRecorder();
     Canvas c = Canvas(recorder);
     Paint paint = new Paint();
@@ -272,6 +278,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     _imageToPrint = picture;
 
+    _lastLanguage = _activeLanguageCode;
+
     return picture.toByteData(format: ImageByteFormat.png);
   }
 
@@ -313,7 +321,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   padding: const EdgeInsets.only(left: 15, bottom: 10),
                   child: DropdownButton(
                       value: _activeLanguageCode,
-                      icon: const Icon(Icons.arrow_downward, color: Colors.blue,),
+                      icon: const Icon(Icons.language, color: Colors.blue,),
                       iconSize: 24,
                       style: const TextStyle(color:Colors.blue),
                       onChanged: (String newLanguage){
@@ -329,7 +337,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   padding: const EdgeInsets.only(left: 15, bottom: 10),
                   child: DropdownButton(
                       value: _numberOfCopies,
-                      icon: const Icon(Icons.arrow_downward, color: Colors.blue,),
+                      icon: const Icon(Icons.copy, color: Colors.blue,),
                       iconSize: 24,
                       style: const TextStyle(color:Colors.blue),
                       onChanged: (int newCopies){
