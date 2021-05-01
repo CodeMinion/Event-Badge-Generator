@@ -34,6 +34,7 @@ dependencies:
     git:
       url: git://github.com/CodeMinion/another_brother.git
   permission_handler: ^7.1.0
+  path_provider: ^2.0.1
 
 
 dev_dependencies:

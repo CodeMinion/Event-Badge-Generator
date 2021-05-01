@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
@@ -8,6 +9,7 @@ import 'package:another_brother/label_info.dart';
 import 'package:another_brother/printer_info.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:ui' as ui;
 
@@ -293,9 +295,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
     _lastLanguage = _activeLanguageCode;
 
-    _imageToShow = Image.memory((await picture.toByteData(format: ImageByteFormat.png)).buffer.asUint8List());
+    var imageBytes = (await picture.toByteData(format: ImageByteFormat.png)).buffer.asUint8List();
+    _imageToShow = Image.memory(imageBytes);
 
-    //return picture.toByteData(format: ImageByteFormat.png);
+    /*
+    print("Getting Dir...");
+    final directory = await getExternalStorageDirectory();
+    print("Getting path...${directory}");
+    final path =  await directory.path;
+    print("Opening File...");
+    final file = await File('$path/IMG_Basque.PNG');
+    print("Saving...");
+    await file.writeAsBytes(imageBytes);
+    print ("Saved File ${file.path}");
+    */
     return _imageToShow;
   }
 
