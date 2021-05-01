@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
@@ -34,7 +35,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Event Badge Generator'),
     );
   }
 }
@@ -59,21 +60,23 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
 
-  String _activeLanguageCode = 'ar';
+  ui.Image _imageToPrint;
+  final translator = GoogleTranslator();
 
-  final Map<String, String> _languageMap = {
-    /*
-    "Afrikaans": "af",
-    "Albanian": "sq",
-    "Amharic": "Amharic",
-    "Arabic": "ar",
-    "Armenian": "hy",
-    "Azerbaijani": "az",
-    "Basque": "eu",
-    "Belarusian": "be",
-    "Bengali": "bn",
-*/
+  int _numberOfCopies = 1;
+  String _activeLanguageCode = 'en';
 
+  List<int> _copiesCount = [
+    1,
+    2,
+    3,
+    5,
+    8,
+    13,
+    21,
+  ];
+
+  final SplayTreeMap<String, String> _languageMap = SplayTreeMap.from({
   "Hindi": "hi",
   "Pashto":"ps",
   "Portuguese": "pt",
@@ -123,7 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
   "Swedish": "sv",
   "Korean": "ko",
   "Swahili":"sw",
-  "Chinese (Traditional)": "zh-TW",
+  "Chinese (Traditional)": "zh-tw",
   "Kurdish (Kurmanji)": "ku",
   "Corsican": "co",
   "Tamil": "ta",
@@ -144,7 +147,7 @@ class _MyHomePageState extends State<MyHomePage> {
   "Lao": "lo",
   "Lithuanian": "lt",
   "Latvian": "lv",
-  "Chinese (Simplified)": "zh-CN",
+  "Chinese (Simplified)": "zh-cn",
   "Uyghur": "ug",
   "Ukrainian": "uk",
   "Malagasy":"mg",
@@ -183,10 +186,9 @@ class _MyHomePageState extends State<MyHomePage> {
   "Punjabi": "pa",
   "Hausa": "ha",
     "Polish":"pl",
-  };
+  });
 
   Future<Translation> getNameTagHeader({String to = 'ar'}) {
-    final translator = GoogleTranslator();
     final input = "Hello, I'm".toUpperCase();
     return translator.translate(input, from: 'en', to: to);
   }
@@ -196,40 +198,34 @@ class _MyHomePageState extends State<MyHomePage> {
     PictureRecorder recorder = PictureRecorder();
     Canvas c = Canvas(recorder);
     Paint paint = new Paint();
-    paint.color = Color.fromRGBO(255, 0, 0, 1);
-    Rect bounds = new Rect.fromLTWH(0, 0, 300, 100);
-    c.drawRect(bounds, paint);
-    
+
     ui.Image badgeBackground = await loadImage("assets/images/IMG_Blank.PNG");
     c.drawImage(badgeBackground, Offset.zero, paint);
 
-    //Translation translation = await getNameTagHeader(to:_activeLanguageCode);
-    Translation translation = await getNameTagHeader(to:"ja");
+    print("Translating...");
+
+    Translation translation = await getNameTagHeader(to:_activeLanguageCode);
+    print("Translation Done!");
 
     int tagWidth = 2048;
     int tagHeight = 1471;
     double tagHorizontalPadding = 100;
     int tagNameSectionHeight = 552;
 
-    /*
-    final TextPainter textPainter = TextPainter(
-        text: TextSpan(text: translation.text, style: TextStyle(
-          color: Colors.white,
-              fontSize: 300,
-        )),
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.ltr,
-      maxLines: 1
-    )
-      ..layout(maxWidth: tagWidth.toDouble());
-
-    textPainter.paint(c, Offset.zero);
-*/
     double fontSize = 300;
     TextStyle style = TextStyle(
       color: Colors.white,
       fontSize: fontSize,
+      fontWeight: FontWeight.bold
     );
+
+    String translationText = translation.text.toUpperCase();
+
+    print ("Translation: $translationText");
+
+    if (!translationText.contains(",") && translationText.split(" ").length > 1) {
+      translationText = translationText.replaceFirst(" ", ", ");
+    }
 
     ui.ParagraphBuilder paragraphBuilder = ui.ParagraphBuilder(
         ui.ParagraphStyle(
@@ -242,7 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
         )
     )
       ..pushStyle(style.getTextStyle())
-      ..addText(translation.text);
+      ..addText(translationText);
 
     ui.Paragraph paragraph = paragraphBuilder.build()..layout(ui.ParagraphConstraints(width: tagWidth.toDouble() - tagHorizontalPadding*2));
     // TODO Find font size that best fits the tag. Some greetings might be longer.
@@ -250,10 +246,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     while (paragraph.didExceedMaxLines) {
       fontSize -= 10;
-      style = TextStyle(
-        color: Colors.white,
-        fontSize: fontSize,
-      );
+      style = style.copyWith(fontSize: fontSize);
+
       paragraphBuilder = ui.ParagraphBuilder(
           ui.ParagraphStyle(
             fontSize:   style.fontSize,
@@ -265,7 +259,7 @@ class _MyHomePageState extends State<MyHomePage> {
           )
       )
         ..pushStyle(style.getTextStyle())
-        ..addText(translation.text);
+        ..addText(translationText);
 
       paragraph = paragraphBuilder.build()..layout(ui.ParagraphConstraints(width: tagWidth.toDouble() - tagHorizontalPadding*2));
     }
@@ -276,8 +270,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
     var picture = await recorder.endRecording().toImage(tagWidth, tagHeight);
 
+    _imageToPrint = picture;
+
     return picture.toByteData(format: ImageByteFormat.png);
   }
+
 
   Future<ui.Image> loadImage(String assetPath) async {
     final ByteData img = await rootBundle.load(assetPath);
@@ -287,6 +284,16 @@ class _MyHomePageState extends State<MyHomePage> {
     });
     return completer.future;
   }
+
+  Future<ui.Image> loadImageFromBuffer(ByteBuffer buffer) async {
+    final Completer<ui.Image> completer = new Completer();
+    ui.decodeImageFromList(new Uint8List.view(buffer), (ui.Image img) {
+      return completer.complete(img);
+    });
+    return completer.future;
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -299,11 +306,53 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 15, bottom: 10),
+                  child: DropdownButton(
+                      value: _activeLanguageCode,
+                      icon: const Icon(Icons.arrow_downward, color: Colors.blue,),
+                      iconSize: 24,
+                      style: const TextStyle(color:Colors.blue),
+                      onChanged: (String newLanguage){
+                        setState(() {
+                          _activeLanguageCode = newLanguage;
+                        });
+                      },
+                      items: _languageMap.entries.map((entry) {
+                    return DropdownMenuItem<String>(child: Text(entry.key), value: entry.value);
+                  }).toList()),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 15, bottom: 10),
+                  child: DropdownButton(
+                      value: _numberOfCopies,
+                      icon: const Icon(Icons.arrow_downward, color: Colors.blue,),
+                      iconSize: 24,
+                      style: const TextStyle(color:Colors.blue),
+                      onChanged: (int newCopies){
+                        setState(() {
+                          _numberOfCopies = newCopies;
+                        });
+                      },
+                      items: _copiesCount.map((count) {
+                        return DropdownMenuItem<int>(child: Text("$count"), value: count);
+                      }).toList()),
+                ),
+
+              ],
+            ),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: FutureBuilder(
                 future: getTag(),
                 builder: (buildContext, AsyncSnapshot<ByteData> snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return CircularProgressIndicator();
+                    }
+
                     if (snapshot.hasData) {
                       return Image.memory(snapshot.data.buffer.asUint8List());
                     }
@@ -320,11 +369,11 @@ class _MyHomePageState extends State<MyHomePage> {
         onPressed: (){
           showDialog(context: context, builder: (BuildContext dialogContext){
             return AlertDialog(
-              contentPadding: EdgeInsets.only(left: 15),
+              contentPadding: EdgeInsets.zero,
               title: Text("Select Printer"),
               content: Container(
                   height: MediaQuery.of(context).size.width*0.8,
-                  child: WifiPrinterListPage()),
+                  child: WifiPrinterListPage(imageToPrint: _imageToPrint, numberOfCopies: _numberOfCopies,)),
             );
           });
         },
@@ -336,9 +385,10 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class WifiPrinterListPage extends StatefulWidget {
-  WifiPrinterListPage({Key key, this.imageToPrint}) : super(key: key);
+  WifiPrinterListPage({Key key, this.imageToPrint, this.numberOfCopies}) : super(key: key);
 
   final ui.Image imageToPrint;
+  final int numberOfCopies;
 
   @override
   _WifiPrinterListPageState createState() => _WifiPrinterListPageState();
@@ -357,88 +407,93 @@ class _WifiPrinterListPageState extends State<WifiPrinterListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: FutureBuilder(
-        future: getMyNetworkPrinters(),
-        builder: (buildContext, snapShot) {
-          if (snapShot.connectionState == ConnectionState.waiting) {
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text("Looking for network printers."),
-            );
-          }
-
-          if (snapShot.hasData) {
-            // TODO Return a list
-            List<NetPrinter> foundPrinters = snapShot.data;
-
-            if (foundPrinters.isEmpty) {
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: FutureBuilder(
+          future: getMyNetworkPrinters(),
+          builder: (buildContext, snapShot) {
+            if (snapShot.connectionState == ConnectionState.waiting) {
               return Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Text("No printers found."),
+                child: Text("Looking for network printers."),
               );
             }
 
-            return ListView.builder(
-                itemCount: foundPrinters.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    child: ListTile(
-                      title: Text("Printer: ${foundPrinters[index].modelName}"),
-                      subtitle: Text("IP: ${foundPrinters[index].ipAddress}"),
-                      onTap: () async {
-                        print ("Printing Image....");
+            if (snapShot.hasData) {
+              // TODO Return a list
+              List<NetPrinter> foundPrinters = snapShot.data;
 
-                        if (!await Permission.storage.request().isGranted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                  "Storage permissions are required to print."),
-                            ),
-                          ));
-                          return;
-                        }
-                        Printer printer = new Printer();
-                        PrinterInfo printInfo = new PrinterInfo();
-                        printInfo.port = Port.NET;
-                        printInfo.printerModel = Model.QL_1110NWB;
-                        printInfo.isAutoCut = true;
-                        printInfo.ipAddress = foundPrinters[index].ipAddress;
-                        printInfo.labelNameIndex =
-                            QL1100.ordinalFromID(QL1100.W62.getId());
-                        printInfo.printMode = PrintMode.FIT_TO_PAGE;
+              if (foundPrinters.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text("No printers found."),
+                );
+              }
 
-                        printer.setPrinterInfo(printInfo);
+              return ListView.builder(
+                  itemCount: foundPrinters.length,
+                  itemBuilder: (context, index) {
+                    return Card(
+                      child: ListTile(
+                        title: Text("Printer: ${foundPrinters[index].modelName}"),
+                        subtitle: Text("IP: ${foundPrinters[index].ipAddress}"),
+                        onTap: () async {
+                          print ("Printing Image....");
 
-                        PrinterStatus status =
-                        await printer.printImage(widget.imageToPrint);
+                          if (!await Permission.storage.request().isGranted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                    "Storage permissions are required to print."),
+                              ),
+                            ));
+                            return;
+                          }
+                          Printer printer = new Printer();
+                          PrinterInfo printInfo = new PrinterInfo();
+                          printInfo.port = Port.NET;
+                          printInfo.printerModel = Model.QL_1110NWB;
+                          printInfo.isAutoCut = true;
+                          printInfo.ipAddress = foundPrinters[index].ipAddress;
+                          printInfo.labelNameIndex =
+                              QL1100.ordinalFromID(QL1100.W62.getId());
+                          printInfo.printMode = PrintMode.FIT_TO_PAGE;
+                          printInfo.numberOfCopies = widget.numberOfCopies;
 
-                        print ("Got Error Code: ${status.errorCode}");
-                        if (status.errorCode != ErrorCode.ERROR_NONE) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                  "Print failed with error: ${status.errorCode.getName()}."),
-                            ),
-                          ));
-                        }
-                      },
-                    ),
-                  );
-                });
-          } else if (snapShot.hasError) {
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text("Error connecting to another_brother."),
-            );
-          } else {
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text("Looking for network printers."),
-            );
-          }
-        },
+                          printer.setPrinterInfo(printInfo);
+
+                          var rotatedImage = await rotateImage(widget.imageToPrint);
+                          PrinterStatus status =
+                          await printer.printImage(rotatedImage);
+
+                          print ("Got Error Code: ${status.errorCode}");
+                          if (status.errorCode != ErrorCode.ERROR_NONE) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                    "Print failed with error: ${status.errorCode.getName()}."),
+                              ),
+                            ));
+                          }
+                        },
+                      ),
+                    );
+                  });
+            } else if (snapShot.hasError) {
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text("Error connecting to another_brother."),
+              );
+            } else {
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text("Looking for network printers."),
+              );
+            }
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue,
@@ -450,4 +505,26 @@ class _WifiPrinterListPageState extends State<WifiPrinterListPage> {
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+
+
+  Future<ui.Image> rotateImage(ui.Image imageToRotate) async {
+
+    PictureRecorder recorder = PictureRecorder();
+    Canvas c = Canvas(recorder);
+    Paint paint = new Paint();
+
+    int tagWidth = 2048;
+    int tagHeight = 1471;
+
+    c.save();
+
+    c.rotate(pi/2);
+    c.drawImage(imageToRotate, Offset(0, -tagHeight.toDouble()), paint);
+    c.restore();
+
+    var picture = await recorder.endRecording().toImage(tagHeight, tagWidth);
+
+    return picture;
+  }
+
 }
