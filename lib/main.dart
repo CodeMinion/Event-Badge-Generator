@@ -61,6 +61,130 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String _activeLanguageCode = 'ar';
 
+  final Map<String, String> _languageMap = {
+    /*
+    "Afrikaans": "af",
+    "Albanian": "sq",
+    "Amharic": "Amharic",
+    "Arabic": "ar",
+    "Armenian": "hy",
+    "Azerbaijani": "az",
+    "Basque": "eu",
+    "Belarusian": "be",
+    "Bengali": "bn",
+*/
+
+  "Hindi": "hi",
+  "Pashto":"ps",
+  "Portuguese": "pt",
+  "Hmong": "hmn",
+  "Croatian":"hr",
+  "Haitian Creole":"ht",
+  "Hungarian": "hu",
+  "Yiddish": "yi",
+  "Armenian": "hy",
+  "Yoruba":"yo",
+  "Indonesian": "id",
+  "Igbo": "ig",
+  "Afrikaans": "af",
+  "Icelandic":"is",
+  "Italian":"it",
+  "Amharic": "am",
+  "Hebrew": "iw",
+  "Arabic": "ar",
+  "Japanese": "ja",
+  "Azerbaijani": "az",
+  "Zulu": "zu",
+  "Romanian": "ro",
+  "Cebuano": "ceb",
+  "Belarusian": "be",
+  "Russian": "ru",
+  "Bulgarian": "bg",
+  "Kinyarwanda": "rw",
+  "Bengali": "bn",
+  "Javanese": "jw",
+  "Bosnian": "bs",
+  "Sindhi":"sd",
+  "Georgian":"ka",
+  "Sinhala": "si",
+  "Slovak": "sk",
+  "Slovenian": "sl",
+  "Samoan": "sm",
+  "Shona":"sn",
+  "Somali":"so",
+  "Albanian":"sq",
+  "Catalan": "ca",
+  "Serbian": "sr",
+  "Kazakh": "kk",
+  "Sesotho": "st",
+  "Khmer": "km",
+  "Sundanese": "su",
+  "Kannada": "kn",
+  "Swedish": "sv",
+  "Korean": "ko",
+  "Swahili":"sw",
+  "Chinese (Traditional)": "zh-TW",
+  "Kurdish (Kurmanji)": "ku",
+  "Corsican": "co",
+  "Tamil": "ta",
+  "Kyrgyz": "ky",
+  "Czech": "cs",
+  "Telugu": "te",
+  "Tajik": "tg",
+  "Thai": "th",
+  "Latin": "la",
+  "Luxembourgish": "lb",
+  "Welsh": "cy",
+  "Turkmen": "tk",
+  "Filipino": "tl",
+  "Danish": "da",
+  "Turkish": "tr",
+  "Tatar": "tt",
+  "German": "de",
+  "Lao": "lo",
+  "Lithuanian": "lt",
+  "Latvian": "lv",
+  "Chinese (Simplified)": "zh-CN",
+  "Uyghur": "ug",
+  "Ukrainian": "uk",
+  "Malagasy":"mg",
+  "Maori": "mi",
+  "Urdu": "ur",
+  "Macedonian": "mk",
+  "Hawaiian": "haw",
+  "Malayalam": "ml",
+  "Mongolian": "mn",
+  "Marathi": "mr",
+  "Uzbek": "uz",
+  "Malay": "ms",
+  "Greek": "el",
+  "Maltese": "mt",
+  "English": "en",
+  "Esperanto": "eo",
+  "Myanmar (Burmese)": "my",
+  "Spanish":"es",
+  "Estonian": "et",
+  "Basque": "eu",
+  "Vietnamese": "vi",
+  "Nepali": "ne",
+  "Persian": "fa",
+  "Dutch":"nl",
+  "Norwegian": "no",
+  "Finnish": "fi",
+  "Chichewa": "ny",
+  "French": "fr",
+  "Frisian": "fy",
+  "Irish": "ga",
+  "Scots Gaelic": "gd",
+  "Odia (Oriya)": "or",
+  "Galician": "gl",
+  "Gujarati": "gu",
+  "Xhosa": "xh",
+  "Punjabi": "pa",
+  "Hausa": "ha",
+    "Polish":"pl",
+  };
+
   Future<Translation> getNameTagHeader({String to = 'ar'}) {
     final translator = GoogleTranslator();
     final input = "Hello, I'm".toUpperCase();
@@ -101,12 +225,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
     textPainter.paint(c, Offset.zero);
 */
+    double fontSize = 300;
     TextStyle style = TextStyle(
       color: Colors.white,
-      fontSize: 300,
+      fontSize: fontSize,
     );
 
-    final ui.ParagraphBuilder paragraphBuilder = ui.ParagraphBuilder(
+    ui.ParagraphBuilder paragraphBuilder = ui.ParagraphBuilder(
         ui.ParagraphStyle(
           fontSize:   style.fontSize,
           fontFamily: style.fontFamily,
@@ -121,6 +246,29 @@ class _MyHomePageState extends State<MyHomePage> {
 
     ui.Paragraph paragraph = paragraphBuilder.build()..layout(ui.ParagraphConstraints(width: tagWidth.toDouble() - tagHorizontalPadding*2));
     // TODO Find font size that best fits the tag. Some greetings might be longer.
+    print ("Exceed Line Limit: ${paragraph.didExceedMaxLines}");
+
+    while (paragraph.didExceedMaxLines) {
+      fontSize -= 10;
+      style = TextStyle(
+        color: Colors.white,
+        fontSize: fontSize,
+      );
+      paragraphBuilder = ui.ParagraphBuilder(
+          ui.ParagraphStyle(
+            fontSize:   style.fontSize,
+            fontFamily: style.fontFamily,
+            fontStyle:  style.fontStyle,
+            fontWeight: style.fontWeight,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+          )
+      )
+        ..pushStyle(style.getTextStyle())
+        ..addText(translation.text);
+
+      paragraph = paragraphBuilder.build()..layout(ui.ParagraphConstraints(width: tagWidth.toDouble() - tagHorizontalPadding*2));
+    }
 
     double leftOffset = (tagWidth - paragraph.width) /2;
     double topOffset = (tagNameSectionHeight - paragraph.height ) /2;
