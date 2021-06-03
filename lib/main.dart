@@ -78,6 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _lastLanguage;
   String _lastName;
   String _greeting = "Hello, I'm";
+  String _lastTranslation;
 
   List<int> _copiesCount = [
     1,
@@ -207,7 +208,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     _tagGenerator = getTag();
     _name = "";
-
+    _lastTranslation = _greeting.toUpperCase();
   }
 
 
@@ -222,12 +223,22 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<Image> getTag() async {
 
     // TODO Seprate this so the translation is not coupled to the badge generation.
-    /*
+
+    String translationText = "";
     if (_activeLanguageCode == _lastLanguage ) {
       //return _imageToPrint.toByteData(format: ImageByteFormat.png);
-      return _imageToShow;
+      translationText = _lastTranslation;
     }
-*/
+    else {
+      print("Translating...");
+      Translation translation = await getNameTagHeader(to: _activeLanguageCode);
+      print("Translation Done!");
+
+      translationText = translation.text.toUpperCase();
+      _lastTranslation = translationText;
+      print("Translation: $translationText");
+    }
+
     PictureRecorder recorder = PictureRecorder();
     Canvas c = Canvas(recorder);
     Paint paint = new Paint();
@@ -235,14 +246,7 @@ class _MyHomePageState extends State<MyHomePage> {
     ui.Image badgeBackground = await loadImage("assets/images/IMG_Blank.PNG");
     c.drawImage(badgeBackground, Offset.zero, paint);
 
-    print("Translating...");
 
-    Translation translation = await getNameTagHeader(to:_activeLanguageCode);
-    print("Translation Done!");
-
-    String translationText = translation.text.toUpperCase();
-
-    print ("Translation: $translationText");
 
     if (!translationText.contains(",") && translationText.split(" ").length > 1) {
       translationText = translationText.replaceFirst(" ", ", ");
