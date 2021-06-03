@@ -77,6 +77,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String _lastLanguage;
   String _lastName;
+  String _greeting = "Hello, I'm";
 
   List<int> _copiesCount = [
     1,
@@ -205,14 +206,15 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     _tagGenerator = getTag();
-    _name = "Frank";
+    _name = "";
 
   }
 
 
 
   Future<Translation> getNameTagHeader({String to = 'ar'}) {
-    final input = "Hello, I'm".toUpperCase();
+    //final input = "Hello, I'm".toUpperCase();
+    final input = _greeting.toUpperCase();
     return translator.translate(input, from: 'en', to: to);
   }
 
@@ -373,6 +375,16 @@ class _MyHomePageState extends State<MyHomePage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28.0),
                 child: TextFormField(
+                  initialValue: _name,
+                  decoration: new InputDecoration(
+                      //border: InputBorder.,
+                      //focusedBorder: InputBorder.none,
+                      //enabledBorder: InputBorder.none,
+                      //errorBorder: InputBorder.none,
+                      //disabledBorder: InputBorder.none,
+                      contentPadding:
+                      EdgeInsets.only(left: 15, bottom: 11, top: 11, right: 15),
+                      hintText: "Tap to enter name"),
                   style: const TextStyle(color:Colors.blue),
                   keyboardType: TextInputType.text,
                   maxLines: 1,
