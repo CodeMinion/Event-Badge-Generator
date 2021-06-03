@@ -68,11 +68,15 @@ class _MyHomePageState extends State<MyHomePage> {
   final translator = GoogleTranslator();
 
   //Future<ByteData> _tagGenerator;
+  String _name = "";
+  String _translationText = "";
+
   Future<Image> _tagGenerator;
   int _numberOfCopies = 1;
   String _activeLanguageCode = 'en';
 
   String _lastLanguage;
+  String _lastName;
 
   List<int> _copiesCount = [
     1,
@@ -196,12 +200,16 @@ class _MyHomePageState extends State<MyHomePage> {
     "Polish":"pl",
   });
 
-
+  Map<String, String > _languageReversed;
 
   void initState() {
     super.initState();
     _tagGenerator = getTag();
+    _name = "Frank";
+
   }
+
+
 
   Future<Translation> getNameTagHeader({String to = 'ar'}) {
     final input = "Hello, I'm".toUpperCase();
@@ -211,11 +219,13 @@ class _MyHomePageState extends State<MyHomePage> {
   //Future<ByteData> getTag() async {
   Future<Image> getTag() async {
 
-    if (_activeLanguageCode == _lastLanguage) {
+    // TODO Seprate this so the translation is not coupled to the badge generation.
+    /*
+    if (_activeLanguageCode == _lastLanguage ) {
       //return _imageToPrint.toByteData(format: ImageByteFormat.png);
       return _imageToShow;
     }
-
+*/
     PictureRecorder recorder = PictureRecorder();
     Canvas c = Canvas(recorder);
     Paint paint = new Paint();
@@ -228,18 +238,6 @@ class _MyHomePageState extends State<MyHomePage> {
     Translation translation = await getNameTagHeader(to:_activeLanguageCode);
     print("Translation Done!");
 
-    int tagWidth = 2048;
-    int tagHeight = 1471;
-    double tagHorizontalPadding = 100;
-    int tagNameSectionHeight = 552;
-
-    double fontSize = 300;
-    TextStyle style = TextStyle(
-      color: Colors.white,
-      fontSize: fontSize,
-      fontWeight: FontWeight.bold
-    );
-
     String translationText = translation.text.toUpperCase();
 
     print ("Translation: $translationText");
@@ -247,6 +245,58 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!translationText.contains(",") && translationText.split(" ").length > 1) {
       translationText = translationText.replaceFirst(" ", ", ");
     }
+
+    _translationText = translationText;
+    
+    return _generateTagImage(_translationText, _name);
+  }
+
+  Future<Image> _generateTagImage(String translationText, String name) async {
+    PictureRecorder recorder = PictureRecorder();
+    Canvas c = Canvas(recorder);
+    Paint paint = new Paint();
+
+    ui.Image badgeBackground = await loadImage("assets/images/IMG_Blank.PNG");
+    c.drawImage(badgeBackground, Offset.zero, paint);
+
+    int tagWidth = 2048;
+    int tagHeight = 1471;
+    double tagHorizontalPadding = 100;
+    int tagNameSectionHeight = 552;
+
+    double fontSize = 300;
+    double nameFontSize = 300 * 2.5;
+    TextStyle style = TextStyle(
+        color: Colors.white,
+        fontSize: fontSize,
+        fontWeight: FontWeight.bold
+    );
+
+    // Generate Tag image
+    ui.Paragraph paragraph = _getFittedLine(translationText, tagWidth, style, fontSize, tagHorizontalPadding);
+
+    ui.Paragraph nameParagraph = _getFittedLine(name, tagWidth, style.copyWith(color: Colors.black, fontSize: nameFontSize), nameFontSize, tagHorizontalPadding);
+
+    double leftOffset = (tagWidth - paragraph.width) /2;
+    double topOffset = (tagNameSectionHeight - paragraph.height ) /2;
+    c.drawParagraph(paragraph, Offset(leftOffset, topOffset));
+
+    double nameLeftOffset = (tagWidth - nameParagraph.width) / 2;
+    double nameTopOffset = tagNameSectionHeight + (tagHeight - tagNameSectionHeight - nameParagraph.height) / 2;
+    c.drawParagraph(nameParagraph, Offset(nameLeftOffset, nameTopOffset));
+
+    var picture = await recorder.endRecording().toImage(tagWidth, tagHeight);
+
+    _imageToPrint = picture;
+
+    _lastLanguage = _activeLanguageCode;
+
+    var imageBytes = (await picture.toByteData(format: ImageByteFormat.png)).buffer.asUint8List();
+    _imageToShow = Image.memory(imageBytes);
+    return _imageToShow;
+  }
+
+  ui.Paragraph _getFittedLine(String translationText, int tagWidth, TextStyle style, double fontSize, double tagHorizontalPadding) {
 
     ui.ParagraphBuilder paragraphBuilder = ui.ParagraphBuilder(
         ui.ParagraphStyle(
@@ -285,31 +335,7 @@ class _MyHomePageState extends State<MyHomePage> {
       paragraph = paragraphBuilder.build()..layout(ui.ParagraphConstraints(width: tagWidth.toDouble() - tagHorizontalPadding*2));
     }
 
-    double leftOffset = (tagWidth - paragraph.width) /2;
-    double topOffset = (tagNameSectionHeight - paragraph.height ) /2;
-    c.drawParagraph(paragraph, Offset(leftOffset, topOffset));
-
-    var picture = await recorder.endRecording().toImage(tagWidth, tagHeight);
-
-    _imageToPrint = picture;
-
-    _lastLanguage = _activeLanguageCode;
-
-    var imageBytes = (await picture.toByteData(format: ImageByteFormat.png)).buffer.asUint8List();
-    _imageToShow = Image.memory(imageBytes);
-
-    /*
-    print("Getting Dir...");
-    final directory = await getExternalStorageDirectory();
-    print("Getting path...${directory}");
-    final path =  await directory.path;
-    print("Opening File...");
-    final file = await File('$path/IMG_Basque.PNG');
-    print("Saving...");
-    await file.writeAsBytes(imageBytes);
-    print ("Saved File ${file.path}");
-    */
-    return _imageToShow;
+    return paragraph;
   }
 
 
@@ -340,67 +366,85 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 15, bottom: 10),
-                  child: DropdownButton(
-                      value: _activeLanguageCode,
-                      icon: const Icon(Icons.language, color: Colors.blue,),
-                      iconSize: 24,
-                      style: const TextStyle(color:Colors.blue),
-                      onChanged: (String newLanguage){
-                        setState(() {
-                          _activeLanguageCode = newLanguage;
-                          _tagGenerator = getTag();
-                        });
-                      },
-                      items: _languageMap.entries.map((entry) {
-                    return DropdownMenuItem<String>(child: Text(entry.key), value: entry.value);
-                  }).toList()),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                child: TextFormField(
+                  style: const TextStyle(color:Colors.blue),
+                  keyboardType: TextInputType.text,
+                  maxLines: 1,
+                  onFieldSubmitted: (changedText) {
+                    print("Submitted: $changedText");
+                    setState(() {
+                      _name = changedText;
+                      _tagGenerator = getTag();
+                    });
+                  },
+                  textInputAction: TextInputAction.done,
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 15, bottom: 10),
-                  child: DropdownButton(
-                      value: _numberOfCopies,
-                      icon: const Icon(Icons.copy, color: Colors.blue,),
-                      iconSize: 24,
-                      style: const TextStyle(color:Colors.blue),
-                      onChanged: (int newCopies){
-                        setState(() {
-                          _numberOfCopies = newCopies;
-                        });
-                      },
-                      items: _copiesCount.map((count) {
-                        return DropdownMenuItem<int>(child: Text("$count"), value: count);
-                      }).toList()),
-                ),
-
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: FutureBuilder(
-                future: _tagGenerator,
-                builder: (buildContext, AsyncSnapshot<Image> snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return CircularProgressIndicator();
-                    }
-
-                    if (snapshot.hasData) {
-                      return snapshot.data;
-                    }
-                    else {
-                      return Text("No Translation");
-                    }
-                },
               ),
-            ),
-          ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 15, bottom: 10),
+                    child: DropdownButton(
+                        value: _activeLanguageCode,
+                        icon: const Icon(Icons.language, color: Colors.blue,),
+                        iconSize: 24,
+                        style: const TextStyle(color:Colors.blue),
+                        onChanged: (String newLanguage){
+                          setState(() {
+                            _activeLanguageCode = newLanguage;
+                            _tagGenerator = getTag();
+                          });
+                        },
+                        items: _languageMap.entries.map((entry) {
+                      return DropdownMenuItem<String>(child: Text(entry.key), value: entry.value);
+                    }).toList()),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 15, bottom: 10),
+                    child: DropdownButton(
+                        value: _numberOfCopies,
+                        icon: const Icon(Icons.copy, color: Colors.blue,),
+                        iconSize: 24,
+                        style: const TextStyle(color:Colors.blue),
+                        onChanged: (int newCopies){
+                          setState(() {
+                            _numberOfCopies = newCopies;
+                          });
+                        },
+                        items: _copiesCount.map((count) {
+                          return DropdownMenuItem<int>(child: Text("$count"), value: count);
+                        }).toList()),
+                  ),
+
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: FutureBuilder(
+                  future: _tagGenerator,
+                  builder: (buildContext, AsyncSnapshot<Image> snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return CircularProgressIndicator();
+                      }
+
+                      if (snapshot.hasData) {
+                        return snapshot.data;
+                      }
+                      else {
+                        return Text("No Translation");
+                      }
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
