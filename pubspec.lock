@@ -4,11 +4,9 @@ packages:
   another_brother:
     dependency: "direct main"
     description:
-      path: "."
-      ref: HEAD
-      resolved-ref: "98c2d93bfc46bff330796266ce7eb4efec1cae14"
-      url: "git://github.com/CodeMinion/another_brother.git"
-    source: git
+      name: another_brother
+      url: "https://pub.dartlang.org"
+    source: hosted
     version: "0.0.21"
   async:
     dependency: transitive
